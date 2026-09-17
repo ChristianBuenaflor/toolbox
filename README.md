@@ -1,143 +1,96 @@
-QR Code Generator
+# QR Code Generator
 
-A simple, modern, and responsive QR Code Generator built with HTML, CSS, and JavaScript. It allows users to create QR codes from text or URLs, customize their appearance, and download them as PNG images with white spacing around the QR code.
+A modern, responsive, client-side QR Code Generator built with separate HTML, CSS, and JavaScript files.
 
-Features
-Generate QR codes from text or URLs
-Live QR code generation while typing
-Custom QR code size
-200 × 200
-300 × 300
-400 × 400
-500 × 500
-600 × 600
-Custom QR code foreground color
-Custom background color
-QR error correction levels
-Low — 7%
-Medium — 15%
-Quartile — 25%
-High — 30%
-Download QR code as PNG
-Adds white spacing around the downloaded QR code
-Clear QR code button
-Responsive design for desktop, tablet, and mobile
-No backend or database required
-Technologies
-HTML5
-CSS3
-JavaScript
-QRCode.js
-Project Structure
+## Features
+
+- Website / URL QR codes
+- Plain text QR codes
+- Email QR codes
+- Phone QR codes
+- SMS QR codes
+- Wi-Fi QR codes
+- Contact / vCard QR codes
+- Location / geo QR codes
+- Live QR customization
+- 240–600 px QR sizes
+- White padding around downloaded raster images
+- Custom foreground/background colors
+- Square, rounded, dots, classy and classy-rounded dot styles
+- Multiple corner styles
+- Error correction levels L, M, Q and H
+- Logo upload with automatic High error correction recommendation
+- Transparent background option
+- Download PNG, JPG and SVG
+- Copy QR image to clipboard
+- Print QR code
+- Recent QR history using localStorage
+- Light/dark theme
+- Responsive mobile layout
+- No backend or database required
+
+## Project structure
+
+```text
 qr-code-generator/
-│
 ├── index.html
+├── style.css
+├── script.js
 └── README.md
-Getting Started
-1. Clone or download the project
+```
 
-Download the project files or clone the repository:
+## Run
 
-git clone https://github.com/your-username/qr-code-generator.git
-2. Open the project
+No build process is required.
 
-Navigate to the project folder:
+1. Download or clone the project.
+2. Open `index.html` in a modern browser.
+3. Enter your content.
+4. Customize the QR code.
+5. Click **Generate QR Code**.
+6. Download, copy or print it.
 
-cd qr-code-generator
-3. Run the application
+The project loads QR Code Styling from a CDN, so an internet connection is required unless you replace the CDN dependency with a local copy.
 
-Since this is a standalone HTML application, you can simply open:
+## White spacing
 
-index.html
+Downloaded PNG/JPG files receive the configured outer padding. The default is 40 px.
 
-in your web browser.
+In `script.js`:
 
-No installation or build process is required.
+```js
+const padding = Number($("padding").value) || 0;
+```
 
-Usage
-Enter a URL or text in the Text or URL field.
-The QR code will be generated automatically.
-Customize the QR code size if needed.
-Select the desired error correction level.
-Choose the QR code and background colors.
-Click Download PNG to save the QR code.
-Downloaded QR Code Spacing
+The preview itself does not receive this outer export padding.
 
-The downloaded PNG automatically includes a white margin around the QR code.
+## Error correction
 
-The spacing is controlled by:
+| Level | Approx. recovery |
+|---|---:|
+| L | 7% |
+| M | 15% |
+| Q | 25% |
+| H | 30% |
 
-const padding = 40;
+Use **H** when placing a logo over the QR code.
 
-The default padding is 40 pixels on all four sides.
+## Privacy
 
-For example:
+QR data is processed in the browser. The project does not send generated content to a custom backend. Recent history is stored locally in the browser using `localStorage`.
 
-┌─────────────────────────────┐
-│                             │
-│    █████████████████████    │
-│    ███ QR CODE ██████████    │
-│    █████████████████████    │
-│                             │
-└─────────────────────────────┘
+## Main dependency
 
-To increase the spacing:
+QR Code Styling:
 
-const padding = 60;
+```html
+<script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js"></script>
+```
 
-To decrease the spacing:
+## Browser support
 
-const padding = 20;
-QR Code Error Correction
+Use a current version of Chrome, Edge, Firefox or Safari. Clipboard image copying requires browser support for the Clipboard API and may require HTTPS or localhost.
 
-The generator supports four QR error correction levels:
+## License
 
-Level	Recovery
-Low (L)	7%
-Medium (M)	15%
-Quartile (Q)	25%
-High (H)	30%
-
-Higher error correction allows the QR code to remain readable even when part of it is damaged or obscured, although it generally requires more QR modules.
-
-Customization
-
-The application uses CSS variables for the main interface colors:
-
-:root {
-    --primary: #6750a4;
-    --primary-dark: #57408f;
-    --background: #f7f5fb;
-    --surface: #ffffff;
-    --text: #24212b;
-    --muted: #77727f;
-    --border: #ded9e5;
-}
-
-You can modify these values to change the overall appearance.
-
-QR Code Library
-
-QR code generation is handled by QRCode.js:
-
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-
-The library is loaded from jsDelivr, so an internet connection is required when loading the application unless the library is downloaded and hosted locally.
-
-Browser Support
-
-The application works in modern browsers, including:
-
-Google Chrome
-Microsoft Edge
-Mozilla Firefox
-Safari
-License
-
-This project is available for personal and educational use. The QR Code Generator itself does not require a backend, database, or server-side processing.
-
-Author
-
-Christian Buenaflor
-
-Web Developer
+You can modify and use this project for personal or commercial projects. Check the QR Code Styling library's license separately.
