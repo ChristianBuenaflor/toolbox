@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>QR Code Generator</title>
+
+    <!-- QR Code Library -->
+     <link rel="stylesheet" href="/css/style.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <header class="header">
+        <h1>QR Code Generator</h1>
+        <p>Create and download a custom QR code instantly.</p>
+    </header>
+
+    <main class="generator">
+
+        <!-- Controls -->
+        <section class="panel">
+
+            <div class="form-group">
+                <label for="qrText">Text or URL</label>
+
+                <textarea
+                    id="qrText"
+                    placeholder="Enter a URL, text, contact information, or anything you want to encode..."
+                ></textarea>
+
+                <div class="input-help">
+                    Your QR code updates automatically as you type.
+                </div>
+            </div>
+
+            <div class="options">
+
+                <div class="form-group">
+                    <label for="qrSize">QR Code Size</label>
+
+                    <select id="qrSize">
+                        <option value="200">200 × 200</option>
+                        <option value="300" selected>300 × 300</option>
+                        <option value="400">400 × 400</option>
+                        <option value="500">500 × 500</option>
+                        <option value="600">600 × 600</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="errorCorrection">
+                        Error Correction
+                    </label>
+
+                    <select id="errorCorrection">
+                        <option value="L">Low — 7%</option>
+                        <option value="M" selected>
+                            Medium — 15%
+                        </option>
+                        <option value="Q">
+                            Quartile — 25%
+                        </option>
+                        <option value="H">
+                            High — 30%
+                        </option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="options">
+
+                <div class="form-group">
+                    <label>QR Color</label>
+
+                    <div class="color-input">
+
+                        <input
+                            type="color"
+                            id="foreground"
+                            value="#ff0000"
+                        >
+
+                        <span
+                            class="color-value"
+                            id="foregroundValue"
+                        >
+                            #FF0000
+                        </span>
+
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Background</label>
+
+                    <div class="color-input">
+
+                        <input
+                            type="color"
+                            id="background"
+                            value="#ffffff"
+                        >
+
+                        <span
+                            class="color-value"
+                            id="backgroundValue"
+                        >
+                            #FFFFFF
+                        </span>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="buttons">
+
+                <button
+                    class="primary-btn"
+                    id="generateBtn"
+                >
+                    Generate QR
+                </button>
+
+                <button
+                    class="secondary-btn"
+                    id="clearBtn"
+                >
+                    Clear
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- Preview -->
+        <section class="preview">
+
+            <div class="preview-title">
+                QR Code Preview
+            </div>
+
+            <div id="qrcode"></div>
+
+            <button
+                class="download-btn"
+                id="downloadBtn"
+            >
+                Download PNG
+            </button>
+
+            <div
+                class="status"
+                id="status"
+            ></div>
+
+        </section>
+
+    </main>
+
+</div>
+<script type="text/javascript" src="/script.js"> </script>
+</body>
+</html>
