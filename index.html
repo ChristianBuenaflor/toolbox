@@ -19,177 +19,255 @@
         <span>Fast, customizable &amp; privacy-friendly</span>
       </div>
     </div>
+
+    <nav class="main-nav" aria-label="Main navigation">
+      <button type="button" class="nav-button active" data-view="qr">QR Generator</button>
+      <button type="button" class="nav-button" data-view="image">Image Converter</button>
+    </nav>
+
     <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">☾</button>
   </header>
 
   <main class="app-shell">
-    <section class="workspace">
-      <div class="panel controls-panel">
+    <div class="tool-panel active" id="qrPanel">
+      <section class="workspace">
+        <div class="panel controls-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">CREATE</span>
+              <h2>QR content</h2>
+            </div>
+            <button id="clearBtn" class="text-button" type="button">Clear</button>
+          </div>
+
+          <label class="field">
+            <span>QR type</span>
+            <select id="qrType">
+              <option value="url">Website / URL</option>
+              <option value="text">Plain Text</option>
+              <option value="email">Email</option>
+              <option value="phone">Phone</option>
+              <option value="sms">SMS</option>
+              <option value="wifi">Wi-Fi</option>
+              <option value="vcard">Contact / vCard</option>
+              <option value="location">Location</option>
+            </select>
+          </label>
+
+          <div id="formFields" class="form-fields"></div>
+
+          <div class="section-title">Customization</div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>Size</span>
+              <select id="size">
+                <option value="240">240 px</option>
+                <option value="320">320 px</option>
+                <option value="400" selected>400 px</option>
+                <option value="500">500 px</option>
+                <option value="600">600 px</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>White padding</span>
+              <input id="padding" type="number" min="0" max="150" step="5" value="40">
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label class="color-field">
+              <span>QR color</span>
+              <div class="color-control">
+                <input id="foreground" type="color" value="#111827">
+                <input id="foregroundHex" type="text" value="#111827" maxlength="7" aria-label="QR color hex">
+              </div>
+            </label>
+            <label class="color-field">
+              <span>Background</span>
+              <div class="color-control">
+                <input id="background" type="color" value="#ffffff">
+                <input id="backgroundHex" type="text" value="#ffffff" maxlength="7" aria-label="Background color hex">
+              </div>
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>Dots</span>
+              <select id="dots">
+                <option value="square" selected>Square</option>
+                <option value="rounded">Rounded</option>
+                <option value="dots">Dots</option>
+                <option value="classy">Classy</option>
+                <option value="classy-rounded">Classy Rounded</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Corner style</span>
+              <select id="corners">
+                <option value="square" selected>Square</option>
+                <option value="dot">Dot</option>
+                <option value="extra-rounded">Extra Rounded</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Error correction</span>
+            <select id="errorCorrection">
+              <option value="L">Low — 7%</option>
+              <option value="M" selected>Medium — 15%</option>
+              <option value="Q">Quartile — 25%</option>
+              <option value="H">High — 30%</option>
+            </select>
+          </label>
+
+          <div class="section-title">Logo</div>
+          <div class="upload-row">
+            <label class="upload-box" for="logoInput">
+              <span class="upload-icon">＋</span>
+              <span id="logoName">Upload logo</span>
+              <small>PNG or JPG</small>
+            </label>
+            <button id="removeLogo" class="secondary-button" type="button">Remove</button>
+            <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          </div>
+
+          <label class="switch-row">
+            <span>
+              <strong>Transparent background</strong>
+              <small>Useful for overlays and design work</small>
+            </span>
+            <input id="transparent" type="checkbox">
+            <span class="switch"></span>
+          </label>
+
+          <button id="generateBtn" class="primary-button" type="button">Generate QR Code</button>
+        </div>
+
+        <div class="panel preview-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">PREVIEW</span>
+              <h2>Your QR code</h2>
+            </div>
+            <span id="statusBadge" class="status-badge">Ready</span>
+          </div>
+
+          <div class="qr-stage" id="qrStage">
+            <div id="qr"></div>
+            <div id="emptyPreview">
+              <div class="empty-icon">⌁</div>
+              <strong>Enter your content</strong>
+              <span>Your QR code will appear here.</span>
+            </div>
+          </div>
+
+          <div id="qrInfo" class="qr-info hidden">
+            <span id="typeLabel">Website</span>
+            <span id="charCount">0 characters</span>
+          </div>
+
+          <div class="download-grid">
+            <button id="downloadPng" class="primary-button" type="button">Download PNG</button>
+            <button id="downloadSvg" class="secondary-button" type="button">Download SVG</button>
+            <button id="downloadJpg" class="secondary-button" type="button">Download JPG</button>
+            <button id="copyBtn" class="secondary-button" type="button">Copy QR</button>
+            <button id="printBtn" class="secondary-button" type="button">Print</button>
+          </div>
+
+          <p class="hint">Tip: use High error correction when adding a logo.</p>
+        </div>
+      </section>
+
+      <section class="panel history-panel">
         <div class="panel-heading">
           <div>
-            <span class="eyebrow">CREATE</span>
-            <h2>QR content</h2>
+            <span class="eyebrow">HISTORY</span>
+            <h2>Recent QR codes</h2>
           </div>
-          <button id="clearBtn" class="text-button" type="button">Clear</button>
+          <button id="clearHistoryBtn" class="text-button" type="button">Clear history</button>
         </div>
-
-        <label class="field">
-          <span>QR type</span>
-          <select id="qrType">
-            <option value="url">Website / URL</option>
-            <option value="text">Plain Text</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone</option>
-            <option value="sms">SMS</option>
-            <option value="wifi">Wi-Fi</option>
-            <option value="vcard">Contact / vCard</option>
-            <option value="location">Location</option>
-          </select>
-        </label>
-
-        <div id="formFields" class="form-fields"></div>
-
-        <div class="section-title">Customization</div>
-
-        <div class="grid-2">
-          <label class="field">
-            <span>Size</span>
-            <select id="size">
-              <option value="240">240 px</option>
-              <option value="320">320 px</option>
-              <option value="400" selected>400 px</option>
-              <option value="500">500 px</option>
-              <option value="600">600 px</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>White padding</span>
-            <input id="padding" type="number" min="0" max="150" step="5" value="40">
-          </label>
+        <div id="historyList" class="history-list">
+          <div class="history-empty">Your recent QR codes will appear here.</div>
         </div>
+      </section>
+    </div>
 
-        <div class="grid-2">
-          <label class="color-field">
-            <span>QR color</span>
-            <div class="color-control">
-              <input id="foreground" type="color" value="#111827">
-              <input id="foregroundHex" type="text" value="#111827" maxlength="7" aria-label="QR color hex">
-            </div>
-          </label>
-          <label class="color-field">
-            <span>Background</span>
-            <div class="color-control">
-              <input id="background" type="color" value="#ffffff">
-              <input id="backgroundHex" type="text" value="#ffffff" maxlength="7" aria-label="Background color hex">
-            </div>
-          </label>
-        </div>
-
-        <div class="grid-2">
-          <label class="field">
-            <span>Dots</span>
-            <select id="dots">
-              <option value="square" selected>Square</option>
-              <option value="rounded">Rounded</option>
-              <option value="dots">Dots</option>
-              <option value="classy">Classy</option>
-              <option value="classy-rounded">Classy Rounded</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>Corner style</span>
-            <select id="corners">
-              <option value="square" selected>Square</option>
-              <option value="dot">Dot</option>
-              <option value="extra-rounded">Extra Rounded</option>
-            </select>
-          </label>
-        </div>
-
-        <label class="field">
-          <span>Error correction</span>
-          <select id="errorCorrection">
-            <option value="L">Low — 7%</option>
-            <option value="M" selected>Medium — 15%</option>
-            <option value="Q">Quartile — 25%</option>
-            <option value="H">High — 30%</option>
-          </select>
-        </label>
-
-        <div class="section-title">Logo</div>
-        <div class="upload-row">
-          <label class="upload-box" for="logoInput">
-            <span class="upload-icon">＋</span>
-            <span id="logoName">Upload logo</span>
-            <small>PNG or JPG</small>
-          </label>
-          <button id="removeLogo" class="secondary-button" type="button">Remove</button>
-          <input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-        </div>
-
-        <label class="switch-row">
-          <span>
-            <strong>Transparent background</strong>
-            <small>Useful for overlays and design work</small>
-          </span>
-          <input id="transparent" type="checkbox">
-          <span class="switch"></span>
-        </label>
-
-        <button id="generateBtn" class="primary-button" type="button">Generate QR Code</button>
-      </div>
-
-      <div class="panel preview-panel">
+    <div class="tool-panel" id="imagePanel">
+      <section class="panel converter-panel">
         <div class="panel-heading">
           <div>
-            <span class="eyebrow">PREVIEW</span>
-            <h2>Your QR code</h2>
+            <span class="eyebrow">TOOLS</span>
+            <h2>Image converter</h2>
           </div>
-          <span id="statusBadge" class="status-badge">Ready</span>
+          <span class="status-badge converter-badge">Bulk</span>
         </div>
 
-        <div class="qr-stage" id="qrStage">
-          <div id="qr"></div>
-          <div id="emptyPreview">
-            <div class="empty-icon">⌁</div>
-            <strong>Enter your content</strong>
-            <span>Your QR code will appear here.</span>
+        <div class="converter-layout">
+          <div class="format-selector" aria-label="Output format selector">
+            <button type="button" class="format-option selected" data-format="jpg">
+              <span>📄 JPG</span>
+              <small>Smaller files</small>
+            </button>
+            <button type="button" class="format-option" data-format="png">
+              <span>🎨 PNG</span>
+              <small>Transparent</small>
+            </button>
+            <button type="button" class="format-option svg-option" data-format="svg">
+              <span>🖼️ SVG</span>
+              <small>Scalable</small>
+            </button>
           </div>
-        </div>
 
-        <div id="qrInfo" class="qr-info hidden">
-          <span id="typeLabel">Website</span>
-          <span id="charCount">0 characters</span>
-        </div>
+          <div class="converter-options">
+            <div class="field-inline">
+              <label class="field compact-field">
+                <span>Width</span>
+                <input id="imageWidth" type="number" min="10" step="10" value="1600">
+              </label>
+              <label class="field compact-field">
+                <span>Height</span>
+                <input id="imageHeight" type="number" min="10" step="10" value="1200">
+              </label>
+            </div>
 
-        <div class="download-grid">
-          <button id="downloadPng" class="primary-button" type="button">Download PNG</button>
-          <button id="downloadSvg" class="secondary-button" type="button">Download SVG</button>
-          <button id="downloadJpg" class="secondary-button" type="button">Download JPG</button>
-          <button id="copyBtn" class="secondary-button" type="button">Copy QR</button>
-          <button id="printBtn" class="secondary-button" type="button">Print</button>
-        </div>
+            <div class="field-inline single-row">
+              <label class="field compact-field">
+                <span>Unit</span>
+                <select id="imageUnit">
+                  <option value="px" selected>Pixels</option>
+                  <option value="in">Inches</option>
+                  <option value="cm">CM</option>
+                </select>
+              </label>
+              <label class="field compact-field target-size-field">
+                <span>Max size</span>
+                <input id="imageTargetSize" type="number" min="50" max="500" step="10" value="300">
+              </label>
+            </div>
+          </div>
 
-        <p class="hint">Tip: use High error correction when adding a logo.</p>
-      </div>
-    </section>
+          <div class="upload-area" id="imageUploadArea" tabindex="0" role="button" aria-label="Upload image files">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Click to upload or drag and drop</div>
+            <div class="upload-hint">Support: JPG, PNG, GIF, BMP, WEBP</div>
+            <input type="file" id="imageFileInput" multiple accept="image/*">
+          </div>
 
-    <section class="panel history-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="eyebrow">HISTORY</span>
-          <h2>Recent QR codes</h2>
+          <div class="preview-grid hidden" id="previewGrid"></div>
+
+          <button class="primary-button converter-button" id="convertBtn" type="button" disabled>Convert Images</button>
+          <div class="status hidden" id="status"></div>
         </div>
-        <button id="clearHistoryBtn" class="text-button" type="button">Clear history</button>
-      </div>
-      <div id="historyList" class="history-list">
-        <div class="history-empty">Your recent QR codes will appear here.</div>
-      </div>
-    </section>
+      </section>
+    </div>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js"></script>
   <script src="/js/script.js"></script>
 </body>

@@ -384,6 +384,340 @@ function toggleTheme() {
   $("themeToggle").textContent = dark ? "☀" : "☾";
 }
 
+function setupToolNavigation() {
+  const navButtons = document.querySelectorAll(".nav-button");
+  const toolPanels = document.querySelectorAll(".tool-panel");
+
+  navButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const selectedView = button.dataset.view;
+
+      navButtons.forEach((item) => {
+        const isActive = item === button;
+        item.classList.toggle("active", isActive);
+        item.setAttribute("aria-pressed", String(isActive));
+      });
+
+      toolPanels.forEach((panel) => {
+        const isActive = panel.id === `${selectedView}Panel`;
+        panel.classList.toggle("active", isActive);
+      });
+    });
+  });
+}
+
+const converterState = {
+  selectedFiles: [],
+  outputFormat: "jpg",
+  targetSizeKB: 300
+};
+
+function getConverterSizeConfig() {
+  const widthInput = $("imageWidth");
+  const heightInput = $("imageHeight");
+  const unitSelect = $("imageUnit");
+  const targetSizeInput = $("imageTargetSize");
+
+  const unit = unitSelect ? unitSelect.value : "px";
+  const targetSizeKB = targetSizeInput ? Math.max(50, Number(targetSizeInput.value) || 300) : 300;
+  let width = widthInput ? Number(widthInput.value) || 1600 : 1600;
+  let height = heightInput ? Number(heightInput.value) || 1200 : 1200;
+
+  if (unit === "in") {
+    width = Math.max(10, width * 300);
+    height = Math.max(10, height * 300);
+  } else if (unit === "cm") {
+    width = Math.max(10, width * 118.11);
+    height = Math.max(10, height * 118.11);
+  }
+
+  converterState.targetSizeKB = targetSizeKB;
+  return { width: Math.round(width), height: Math.round(height), targetSizeKB };
+}
+
+function exportBlobWithSizeLimit(canvas, format, maxBytes) {
+  return new Promise((resolve, reject) => {
+    const mime = format === "jpg" ? "image/jpeg" : "image/png";
+    const scaleDown = (nextScale) => {
+      const scaledWidth = Math.max(32, Math.round(canvas.width * nextScale));
+      const scaledHeight = Math.max(32, Math.round(canvas.height * nextScale));
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = scaledWidth;
+      tempCanvas.height = scaledHeight;
+      const ctx = tempCanvas.getContext("2d");
+      ctx.fillStyle = format === "jpg" ? "#FFFFFF" : "rgba(255,255,255,0)";
+      ctx.fillRect(0, 0, scaledWidth, scaledHeight);
+      ctx.drawImage(canvas, 0, 0, scaledWidth, scaledHeight);
+      return tempCanvas;
+    };
+
+    const tryExport = (quality, currentCanvas = canvas) => {
+      currentCanvas.toBlob((blob) => {
+        if (!blob) return reject(new Error("Unable to export image."));
+        if (blob.size <= maxBytes) {
+          resolve(blob);
+          return;
+        }
+
+        if (format === "jpg" && quality > 0.15) {
+          tryExport(Math.max(0.15, quality - 0.08), currentCanvas);
+          return;
+        }
+
+        if (currentCanvas.width > 32 && currentCanvas.height > 32) {
+          tryExport(quality, scaleDown(0.9));
+          return;
+        }
+
+        reject(new Error(`Unable to keep file under ${maxBytes / 1024} KB.`));
+      }, mime, quality);
+    };
+
+    tryExport(format === "jpg" ? 0.95 : 1);
+  });
+}
+
+function createSvgFromImageData(imageData, width, height) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <image href="data:image/png;base64,${imageData}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" />
+    </svg>
+  `;
+  return new Blob([svg], { type: "image/svg+xml" });
+}
+
+function generateConvertedBlob(file, format) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const { width: targetWidth, height: targetHeight, targetSizeKB } = getConverterSizeConfig();
+          const maxBytes = targetSizeKB * 1024;
+          const maxWidth = Math.max(10, targetWidth);
+          const maxHeight = Math.max(10, targetHeight);
+          const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+          const width = Math.max(32, Math.round(img.width * ratio));
+          const height = Math.max(32, Math.round(img.height * ratio));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+
+          if (format === "jpg") {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, width, height);
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          if (format === "svg") {
+            canvas.toBlob((pngBlob) => {
+              if (!pngBlob) return reject(new Error("Unable to create SVG preview."));
+              const imageReader = new FileReader();
+              imageReader.onload = () => {
+                const data = String(imageReader.result).split(",")[1];
+                const svgBlob = createSvgFromImageData(data, width, height);
+                resolve(svgBlob.size > maxBytes ? svgBlob.slice(0, maxBytes) : svgBlob);
+              };
+              imageReader.readAsDataURL(pngBlob);
+            }, "image/png", 0.95);
+            return;
+          }
+
+          exportBlobWithSizeLimit(canvas, format, maxBytes)
+            .then(resolve)
+            .catch(reject);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      img.onerror = () => reject(new Error("Failed to load image."));
+      img.src = event.target.result;
+    };
+
+    reader.onerror = () => reject(new Error("Failed to read file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function setupImageConverter() {
+  const imageUploadArea = $("imageUploadArea");
+  const imageFileInput = $("imageFileInput");
+  const previewGrid = $("previewGrid");
+  const convertBtn = $("convertBtn");
+  const statusDiv = $("status");
+  const formatOptions = document.querySelectorAll(".format-option");
+
+  if (!imageUploadArea || !imageFileInput || !previewGrid || !convertBtn || !statusDiv) return;
+
+  const showStatus = (message, type) => {
+    statusDiv.className = `status ${type}`;
+    statusDiv.innerHTML = message;
+    statusDiv.classList.remove("hidden");
+  };
+
+  const updatePreview = () => {
+    previewGrid.innerHTML = "";
+
+    if (converterState.selectedFiles.length === 0) {
+      previewGrid.classList.add("hidden");
+      convertBtn.disabled = true;
+      return;
+    }
+
+    previewGrid.classList.remove("hidden");
+
+    converterState.selectedFiles.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const item = document.createElement("div");
+        item.className = "preview-item";
+        item.innerHTML = `
+          <img src="${event.target.result}" alt="${escapeHtml(file.name)}">
+          <button type="button" class="remove-btn" data-index="${index}" aria-label="Remove ${escapeHtml(file.name)}">×</button>
+          <div class="filename">${escapeHtml(file.name)}</div>
+        `;
+        const removeBtn = item.querySelector(".remove-btn");
+        removeBtn.addEventListener("click", () => {
+          converterState.selectedFiles.splice(index, 1);
+          updatePreview();
+        });
+        previewGrid.appendChild(item);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const convertImage = (file) => generateConvertedBlob(file, converterState.outputFormat);
+
+  const handleFiles = (files) => {
+    const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+
+    if (imageFiles.length === 0) {
+      showStatus("Please select valid image files.", "error");
+      return;
+    }
+
+    converterState.selectedFiles = [...converterState.selectedFiles, ...imageFiles];
+    updatePreview();
+    convertBtn.disabled = false;
+    statusDiv.classList.add("hidden");
+  };
+
+  const removeFile = (index) => {
+    converterState.selectedFiles.splice(index, 1);
+    updatePreview();
+  };
+
+  imageFileInput.addEventListener("change", (event) => handleFiles(event.target.files));
+
+  imageUploadArea.addEventListener("click", () => imageFileInput.click());
+  imageUploadArea.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      imageFileInput.click();
+    }
+  });
+
+  ["dragover", "dragenter"].forEach((eventName) => {
+    imageUploadArea.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      imageUploadArea.classList.add("dragover");
+    });
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    imageUploadArea.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      imageUploadArea.classList.remove("dragover");
+    });
+  });
+
+  imageUploadArea.addEventListener("drop", (event) => {
+    handleFiles(event.dataTransfer.files);
+  });
+
+  formatOptions.forEach((option) => {
+    option.addEventListener("click", () => {
+      formatOptions.forEach((item) => item.classList.remove("selected"));
+      option.classList.add("selected");
+      converterState.outputFormat = option.dataset.format;
+    });
+  });
+
+  ["imageWidth", "imageHeight", "imageUnit", "imageTargetSize"].forEach((id) => {
+    const element = $(id);
+    if (element) {
+      element.addEventListener("input", () => {
+        if (id === "imageUnit") {
+          const config = getConverterSizeConfig();
+          const width = $("imageWidth");
+          const height = $("imageHeight");
+          if (config.unit === "px") {
+            width.value = Math.max(10, Math.round(width.value || 1600));
+            height.value = Math.max(10, Math.round(height.value || 1200));
+          }
+        }
+      });
+    }
+  });
+
+  convertBtn.addEventListener("click", async () => {
+    if (converterState.selectedFiles.length === 0) return;
+
+    convertBtn.disabled = true;
+    showStatus(`<span class="spinner">⏳</span> Converting ${converterState.selectedFiles.length} image(s)...`, "processing");
+
+    try {
+      const zip = new JSZip();
+      const convertedBlobs = [];
+
+      for (let i = 0; i < converterState.selectedFiles.length; i++) {
+        const file = converterState.selectedFiles[i];
+        const blob = await convertImage(file);
+        const originalName = file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
+        const fileName = `${originalName}.${converterState.outputFormat}`;
+        convertedBlobs.push({ blob, fileName });
+      }
+
+      if (convertedBlobs.length === 1) {
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(convertedBlobs[0].blob);
+        link.href = url;
+        link.download = convertedBlobs[0].fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else {
+        showStatus(`<span class="spinner">⏳</span> Creating ZIP archive...`, "processing");
+        convertedBlobs.forEach(({ blob, fileName }) => zip.file(fileName, blob));
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(zipBlob);
+        link.href = url;
+        link.download = `converted_images_${Date.now()}.zip`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      showStatus(`✅ Successfully converted ${converterState.selectedFiles.length} image(s)!<br><small>Target size: ${converterState.targetSizeKB} KB</small>`, "success");
+      setTimeout(() => {
+        converterState.selectedFiles = [];
+        updatePreview();
+        imageFileInput.value = "";
+      }, 1800);
+    } catch (error) {
+      showStatus(`❌ Error: ${error.message}`, "error");
+      convertBtn.disabled = false;
+    }
+  });
+}
+
+setupToolNavigation();
+setupImageConverter();
+
 $("qrType").addEventListener("change", () => { renderFields(); if (state.generated) clearAll(); });
 $("generateBtn").addEventListener("click", () => renderQR(true));
 $("clearBtn").addEventListener("click", clearAll);
