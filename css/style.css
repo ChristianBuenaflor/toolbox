@@ -500,6 +500,50 @@ input:focus, textarea:focus, select:focus {
   background: var(--primary-soft);
 }
 
+.case-converter-panel {
+  margin-top: 20px;
+}
+
+.case-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.case-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.case-action {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: all .2s ease;
+}
+
+.case-action:hover,
+.case-action.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.case-footer {
+  display: flex;
+  gap: 10px;
+}
+
+.case-footer > * {
+  flex: 1;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

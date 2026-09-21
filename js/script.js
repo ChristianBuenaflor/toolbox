@@ -397,6 +397,121 @@ function toggleSidebar() {
   collapseButton.textContent = isCollapsed ? "⟩" : "⟨";
 }
 
+function toTitleCase(value) {
+  return value.toLowerCase().replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1));
+}
+
+function toSentenceCase(value) {
+  return value.toLowerCase().replace(/(^\s*\w|[.!?]\s+\w)/g, (match) => match.toUpperCase());
+}
+
+function toCamelCase(value) {
+  const words = value
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) return "";
+  return words.map((word, index) => {
+    const normalized = word.toLowerCase();
+    return index === 0 ? normalized : normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }).join("");
+}
+
+function toSnakeCase(value) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function toKebabCase(value) {
+  return toSnakeCase(value).replace(/_/g, "-");
+}
+
+function convertCaseText(value, mode) {
+  const text = String(value ?? "");
+  if (!text.trim()) return "";
+
+  switch (mode) {
+    case "upper":
+      return text.toUpperCase();
+    case "lower":
+      return text.toLowerCase();
+    case "title":
+      return toTitleCase(text);
+    case "sentence":
+      return toSentenceCase(text);
+    case "camel":
+      return toCamelCase(text);
+    case "snake":
+      return toSnakeCase(text);
+    case "kebab":
+      return toKebabCase(text);
+    default:
+      return text;
+  }
+}
+
+function setupCaseConverter() {
+  const caseInput = $("caseInput");
+  const caseOutput = $("caseOutput");
+  const copyCaseBtn = $("copyCaseBtn");
+  const clearCaseBtn = $("clearCaseBtn");
+
+  if (!caseInput || !caseOutput || !copyCaseBtn || !clearCaseBtn) return;
+
+  const updateCaseOutput = (mode = "upper") => {
+    caseOutput.value = convertCaseText(caseInput.value, mode);
+  };
+
+  caseInput.addEventListener("input", () => {
+    const activeButton = document.querySelector(".case-action.active");
+    const mode = activeButton ? activeButton.dataset.case : "upper";
+    updateCaseOutput(mode);
+  });
+
+  document.querySelectorAll(".case-action").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".case-action").forEach((item) => {
+        const isActive = item === button;
+        item.classList.toggle("active", isActive);
+        item.setAttribute("aria-pressed", String(isActive));
+      });
+      updateCaseOutput(button.dataset.case);
+    });
+  });
+
+  copyCaseBtn.addEventListener("click", async () => {
+    const content = caseOutput.value.trim();
+    if (!content) return showToast("Enter some text to copy.");
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        caseOutput.focus();
+        caseOutput.select();
+        document.execCommand("copy");
+      }
+      showToast("Converted text copied.");
+    } catch (error) {
+      showToast("Copy is not supported in this browser.");
+    }
+  });
+
+  clearCaseBtn.addEventListener("click", () => {
+    caseInput.value = "";
+    caseOutput.value = "";
+    caseInput.focus();
+  });
+
+  updateCaseOutput();
+}
+
 function setupToolNavigation() {
   const navButtons = document.querySelectorAll(".nav-button");
   const toolPanels = document.querySelectorAll(".tool-panel");
@@ -824,6 +939,7 @@ function setupImageConverter() {
 
 setupToolNavigation();
 setupImageConverter();
+setupCaseConverter();
 
 $("qrType").addEventListener("change", () => { renderFields(); if (state.generated) clearAll(); });
 $("generateBtn").addEventListener("click", () => renderQR(true));

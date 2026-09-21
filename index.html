@@ -24,6 +24,7 @@
       <nav class="main-nav" aria-label="Main navigation">
         <button type="button" class="nav-button active" data-view="qr">QR Generator</button>
         <button type="button" class="nav-button" data-view="image">Image Converter</button>
+        <button type="button" class="nav-button" data-view="case">Case Converter</button>
       </nav>
 
       <div class="sidebar-footer">
@@ -275,6 +276,45 @@
 
           <button class="primary-button converter-button" id="convertBtn" type="button" disabled>Convert Images</button>
           <div class="status hidden" id="status"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="tool-panel" id="casePanel">
+      <section class="panel case-converter-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">TEXT</span>
+            <h2>Case converter</h2>
+          </div>
+          <span class="status-badge converter-badge">Text</span>
+        </div>
+
+        <div class="case-layout">
+          <label class="field">
+            <span>Input text</span>
+            <textarea id="caseInput" rows="8" placeholder="Type or paste text here..."></textarea>
+          </label>
+
+          <div class="case-actions" aria-label="Case conversion actions">
+            <button type="button" class="case-action active" data-case="upper" aria-pressed="true">UPPERCASE</button>
+            <button type="button" class="case-action" data-case="lower" aria-pressed="false">lowercase</button>
+            <button type="button" class="case-action" data-case="title" aria-pressed="false">Title Case</button>
+            <button type="button" class="case-action" data-case="sentence" aria-pressed="false">Sentence case</button>
+            <button type="button" class="case-action" data-case="camel" aria-pressed="false">camelCase</button>
+            <button type="button" class="case-action" data-case="snake" aria-pressed="false">snake_case</button>
+            <button type="button" class="case-action" data-case="kebab" aria-pressed="false">kebab-case</button>
+          </div>
+
+          <label class="field">
+            <span>Converted text</span>
+            <textarea id="caseOutput" rows="8" readonly placeholder="Your converted text will appear here..."></textarea>
+          </label>
+
+          <div class="case-footer">
+            <button id="copyCaseBtn" class="secondary-button" type="button">Copy result</button>
+            <button id="clearCaseBtn" class="primary-button" type="button">Clear</button>
+          </div>
         </div>
       </section>
     </div>
