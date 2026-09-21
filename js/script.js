@@ -384,6 +384,19 @@ function toggleTheme() {
   $("themeToggle").textContent = dark ? "☀" : "☾";
 }
 
+function toggleSidebar() {
+  const appLayout = document.querySelector(".app-layout");
+  const sidebar = document.querySelector(".sidebar");
+  const collapseButton = $("sidebarToggle");
+
+  if (!appLayout || !sidebar || !collapseButton) return;
+
+  const isCollapsed = appLayout.classList.toggle("sidebar-collapsed");
+  sidebar.setAttribute("aria-expanded", String(!isCollapsed));
+  collapseButton.setAttribute("aria-label", isCollapsed ? "Expand sidebar" : "Collapse sidebar");
+  collapseButton.textContent = isCollapsed ? "⟩" : "⟨";
+}
+
 function setupToolNavigation() {
   const navButtons = document.querySelectorAll(".nav-button");
   const toolPanels = document.querySelectorAll(".tool-panel");
@@ -405,12 +418,6 @@ function setupToolNavigation() {
     });
   });
 }
-
-const converterState = {
-  selectedFiles: [],
-  outputFormat: "jpg",
-  targetSizeKB: 300
-};
 
 function getConverterSizeConfig() {
   const widthInput = $("imageWidth");
@@ -477,13 +484,74 @@ function exportBlobWithSizeLimit(canvas, format, maxBytes) {
   });
 }
 
+function createSvgMarkupFromImageData(imageData, width, height) {
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <image href="data:image/png;base64,${imageData}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" />
+</svg>
+`.trim();
+}
+
 function createSvgFromImageData(imageData, width, height) {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-      <image href="data:image/png;base64,${imageData}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" />
-    </svg>
-  `;
-  return new Blob([svg], { type: "image/svg+xml" });
+  return new Blob([createSvgMarkupFromImageData(imageData, width, height)], { type: "image/svg+xml" });
+}
+
+function updateSvgCodeUI() {
+  const panel = $("svgCodePanel");
+  const textarea = $("svgCodeOutput");
+  const convertBtn = $("convertBtn");
+
+  if (convertBtn) {
+    convertBtn.textContent = converterState.outputFormat === "svg" ? "Generate SVG Preview" : "Convert Images";
+  }
+
+  if (!panel || !textarea) return;
+  const shouldShow = converterState.outputFormat === "svg" && Boolean(converterState.latestSvgMarkup);
+  panel.classList.toggle("hidden", !shouldShow);
+  if (shouldShow) textarea.value = converterState.latestSvgMarkup;
+}
+
+function copySvgMarkup() {
+  const markup = converterState.latestSvgMarkup || $("svgCodeOutput")?.value;
+  if (!markup) return showToast("Generate an SVG first.");
+
+  const copyText = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(markup);
+      } else {
+        const textArea = $("svgCodeOutput");
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+      }
+      showToast("SVG code copied to clipboard.");
+    } catch (error) {
+      showToast("Copy is not supported in this browser.");
+    }
+  };
+
+  copyText();
+}
+
+function downloadSvgMarkup() {
+  const markup = converterState.latestSvgMarkup || $("svgCodeOutput")?.value;
+  if (!markup) return showToast("Generate an SVG first.");
+
+  try {
+    const blob = new Blob([markup], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "converted-image.svg";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast("SVG downloaded.");
+  } catch (error) {
+    showToast("SVG download failed.");
+  }
 }
 
 function generateConvertedBlob(file, format) {
@@ -518,8 +586,11 @@ function generateConvertedBlob(file, format) {
               const imageReader = new FileReader();
               imageReader.onload = () => {
                 const data = String(imageReader.result).split(",")[1];
+                const svgMarkup = createSvgMarkupFromImageData(data, width, height);
                 const svgBlob = createSvgFromImageData(data, width, height);
-                resolve(svgBlob.size > maxBytes ? svgBlob.slice(0, maxBytes) : svgBlob);
+                converterState.latestSvgMarkup = svgMarkup;
+                updateSvgCodeUI();
+                resolve(svgBlob);
               };
               imageReader.readAsDataURL(pngBlob);
             }, "image/png", 0.95);
@@ -542,6 +613,13 @@ function generateConvertedBlob(file, format) {
     reader.readAsDataURL(file);
   });
 }
+
+const converterState = {
+  selectedFiles: [],
+  outputFormat: "jpg",
+  targetSizeKB: 300,
+  latestSvgMarkup: ""
+};
 
 function setupImageConverter() {
   const imageUploadArea = $("imageUploadArea");
@@ -641,10 +719,25 @@ function setupImageConverter() {
   });
 
   formatOptions.forEach((option) => {
-    option.addEventListener("click", () => {
+    option.addEventListener("click", async () => {
       formatOptions.forEach((item) => item.classList.remove("selected"));
       option.classList.add("selected");
       converterState.outputFormat = option.dataset.format;
+      updateSvgCodeUI();
+
+      if (converterState.outputFormat === "svg" && converterState.selectedFiles.length > 0) {
+        const file = converterState.selectedFiles[0];
+        try {
+          await generateConvertedBlob(file, "svg");
+        } catch (error) {
+          converterState.latestSvgMarkup = "";
+          updateSvgCodeUI();
+          showStatus(`❌ Error: ${error.message}`, "error");
+        }
+      } else {
+        converterState.latestSvgMarkup = "";
+        updateSvgCodeUI();
+      }
     });
   });
 
@@ -683,14 +776,21 @@ function setupImageConverter() {
         convertedBlobs.push({ blob, fileName });
       }
 
-      if (convertedBlobs.length === 1) {
+      if (converterState.outputFormat === "svg") {
+        const firstSvg = convertedBlobs[0]?.blob;
+        if (firstSvg && converterState.latestSvgMarkup) {
+          showStatus(`<span class="spinner">⏳</span> SVG code ready to copy or download.`, "processing");
+        }
+      }
+
+      if (convertedBlobs.length === 1 && converterState.outputFormat !== "svg") {
         const link = document.createElement("a");
         const url = URL.createObjectURL(convertedBlobs[0].blob);
         link.href = url;
         link.download = convertedBlobs[0].fileName;
         link.click();
         URL.revokeObjectURL(url);
-      } else {
+      } else if (convertedBlobs.length > 1) {
         showStatus(`<span class="spinner">⏳</span> Creating ZIP archive...`, "processing");
         convertedBlobs.forEach(({ blob, fileName }) => zip.file(fileName, blob));
         const zipBlob = await zip.generateAsync({ type: "blob" });
@@ -702,11 +802,18 @@ function setupImageConverter() {
         URL.revokeObjectURL(url);
       }
 
-      showStatus(`✅ Successfully converted ${converterState.selectedFiles.length} image(s)!<br><small>Target size: ${converterState.targetSizeKB} KB</small>`, "success");
+      if (converterState.outputFormat === "svg") {
+        showStatus(`✅ SVG preview generated.<br><small>Use the code box below to copy or download it.</small>`, "success");
+      } else {
+        showStatus(`✅ Successfully converted ${converterState.selectedFiles.length} image(s)!<br><small>Target size: ${converterState.targetSizeKB} KB</small>`, "success");
+      }
+
       setTimeout(() => {
-        converterState.selectedFiles = [];
-        updatePreview();
-        imageFileInput.value = "";
+        if (converterState.outputFormat !== "svg") {
+          converterState.selectedFiles = [];
+          updatePreview();
+          imageFileInput.value = "";
+        }
       }, 1800);
     } catch (error) {
       showStatus(`❌ Error: ${error.message}`, "error");
@@ -727,6 +834,7 @@ $("downloadSvg").addEventListener("click", downloadSvg);
 $("copyBtn").addEventListener("click", copyQR);
 $("printBtn").addEventListener("click", printQR);
 $("themeToggle").addEventListener("click", toggleTheme);
+$("sidebarToggle").addEventListener("click", toggleSidebar);
 $("clearHistoryBtn").addEventListener("click", () => { localStorage.removeItem("qrHistory"); renderHistory(); });
 $("removeLogo").addEventListener("click", () => {
   state.logo = null;

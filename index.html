@@ -8,27 +8,31 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark">TBK</div>
-      <div>
-        <h1>ToolboxKo</h1>
-        <span>Multiple tools for daily use</span>
+  <div class="app-layout">
+    <aside class="sidebar" aria-label="Sidebar navigation">
+      <div class="brand">
+        <div class="brand-mark">TBK</div>
+        <div class="brand-copy">
+          <h1>ToolboxKo</h1>
+          <span>Multiple tools for daily use</span>
+        </div>
       </div>
-    </div>
 
-    <nav class="main-nav" aria-label="Main navigation">
-      <button type="button" class="nav-button active" data-view="qr">QR Generator</button>
-      <button type="button" class="nav-button" data-view="image">Image Converter</button>
-    </nav>
+      <nav class="main-nav" aria-label="Main navigation">
+        <button type="button" class="nav-button active" data-view="qr">QR Generator</button>
+        <button type="button" class="nav-button" data-view="image">Image Converter</button>
+      </nav>
 
-    <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">☾</button>
-  </header>
+      <div class="sidebar-footer">
+        <button id="sidebarToggle" class="icon-button collapse-button" type="button" aria-label="Collapse sidebar">⟨</button>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">☾</button>
+      </div>
+    </aside>
 
-  <main class="app-shell">
+    <main class="app-shell">
     <div class="tool-panel active" id="qrPanel">
       <section class="workspace">
         <div class="panel controls-panel">
@@ -208,15 +212,15 @@
         <div class="converter-layout">
           <div class="format-selector" aria-label="Output format selector">
             <button type="button" class="format-option selected" data-format="jpg">
-              <span>📄 JPG</span>
+              <span>JPG</span>
               <small>Smaller files</small>
             </button>
             <button type="button" class="format-option" data-format="png">
-              <span>🎨 PNG</span>
+              <span>PNG</span>
               <small>Transparent</small>
             </button>
             <button type="button" class="format-option svg-option" data-format="svg">
-              <span>🖼️ SVG</span>
+              <span>SVG</span>
               <small>Scalable</small>
             </button>
           </div>
@@ -258,17 +262,29 @@
 
           <div class="preview-grid hidden" id="previewGrid"></div>
 
+          <div class="svg-code-panel hidden" id="svgCodePanel">
+            <label class="field compact-field">
+              <span>SVG code</span>
+              <textarea id="svgCodeOutput" readonly spellcheck="false"></textarea>
+            </label>
+            <div class="svg-actions">
+              <button id="copySvgCodeBtn" class="secondary-button" type="button">Copy code</button>
+              <button id="downloadSvgCodeBtn" class="primary-button" type="button">Download SVG</button>
+            </div>
+          </div>
+
           <button class="primary-button converter-button" id="convertBtn" type="button" disabled>Convert Images</button>
           <div class="status hidden" id="status"></div>
         </div>
       </section>
     </div>
-  </main>
+    </main>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js"></script>
-  <script src="/js/script.js"></script>
+  <script src="js/script.js"></script>
 </body>
 </html>
