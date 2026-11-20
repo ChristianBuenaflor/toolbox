@@ -5,6 +5,7 @@ A modern, responsive, client-side toolbox with multiple daily-use tools. No back
 Live tools:
 - **QR Generator** — styled QR codes with logo, history, and PNG/JPG/SVG export
 - **Image Converter** — bulk JPG/PNG/SVG conversion with resize and file-size limit
+- **Photo Geotag** — read/write GPS EXIF on JPG photos with an OpenStreetMap picker
 - **Case Converter** — UPPERCASE, lowercase, Title, Sentence, camelCase, snake_case, kebab-case
 
 ## Project structure
@@ -25,7 +26,7 @@ No build process is required.
 
 1. Download or clone the project.
 2. Open `index.html` in a modern browser.
-3. Use the sidebar to switch tools: QR Generator / Image Converter / Case Converter.
+3. Use the sidebar to switch tools: QR Generator / Image Converter / Photo Geotag / Case Converter.
 
 Internet connection is required for CDN dependencies unless replaced with local copies.
 
@@ -58,7 +59,14 @@ Actions:
 - Single file: direct download; multiple files: ZIP archive via JSZip (`converted_images_<timestamp>.zip`)
 - SVG mode: shows code panel with Copy code / Download SVG
 
-## 3. Case Converter
+## 3. Photo Geotag
+
+- Upload a JPG (max 20 MB); existing GPS EXIF is read automatically and shown on an OpenStreetMap map
+- Click the map, drag the pin, or type Latitude / Longitude to set the location
+- Download geotagged JPG saves a new `<name>-geotagged.jpg`; other EXIF fields are preserved
+- JPG only — PNG/WebP/HEIC are not supported (EXIF writing uses the JPEG APP1 segment)
+
+## 4. Case Converter
 
 - Modes: UPPER, lower, Title Case, Sentence case, camelCase, snake_case, kebab-case
 - Live conversion on input / mode switch
@@ -73,20 +81,25 @@ the `integrity` hash for the new file, otherwise the script will be blocked.
 ```html
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-..." crossorigin="anonymous" defer></script>
 <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js" integrity="sha384-..." crossorigin="anonymous" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-..." crossorigin="anonymous" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.min.js" integrity="sha384-..." crossorigin="anonymous" defer></script>
 ```
+
+Leaflet CSS is also loaded from unpkg. Map tiles come from OpenStreetMap.
 
 Fonts: Inter + Space Grotesk via Google Fonts.
 
 ## Privacy
 
-All processing happens in the browser. No content is sent to a custom backend. QR history and theme are stored locally in `localStorage`. Wi-Fi QR codes are never written to history so passwords are not persisted.
+All processing happens in the browser. No content is sent to a custom backend. QR history and theme are stored locally in `localStorage`. Wi-Fi QR codes are never written to history so passwords are not persisted. Photos are never uploaded by Photo Geotag; only the map tiles are fetched from OpenStreetMap.
 
 ## Security notes
 
 - `Content-Security-Policy` is set via `<meta>` (scripts: self + pinned CDNs; no plugins/objects).
 - All `localStorage` access is validated and wrapped in try/catch (corrupt data or private mode can't crash the app).
 - History, preview and status rendering use DOM APIs / text assignment — user content is never injected as HTML.
-- Uploads are allow-listed by MIME type and capped (logo: PNG/JPG/WEBP, 2 MB; converter: 20 files, 25 MB each, JPG/PNG/GIF/BMP/WEBP only).
+- Uploads are allow-listed by MIME type and capped (logo: PNG/JPG/WEBP, 2 MB; converter: 20 files, 25 MB each, JPG/PNG/GIF/BMP/WEBP only; geotag: JPG, 20 MB).
+- Geotag coordinates are range-checked (−90…90 lat, −180…180 lon) before EXIF is written.
 - QR payloads are capped (4000 chars), URLs restricted to http(s), phones validated, and vCard fields are newline-stripped/escaped.
 - Print view is built with DOM APIs (`window.open` uses `noopener,noreferrer` + `opener = null`).
 

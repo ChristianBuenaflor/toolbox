@@ -6,11 +6,12 @@
   <meta name="description" content="Modern QR Code Generator with Wi-Fi, contact, email, phone, location, styling, logo, history and multiple download formats.">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#0c1320">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' https://fonts.googleapis.com https://unpkg.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>ToolboxKo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -27,6 +28,7 @@
       <nav class="main-nav" aria-label="Main navigation">
         <button type="button" class="nav-button active" data-view="qr">QR Generator</button>
         <button type="button" class="nav-button" data-view="image">Image Converter</button>
+        <button type="button" class="nav-button" data-view="geo">Photo Geotag</button>
         <button type="button" class="nav-button" data-view="case">Case Converter</button>
         <button type="button" class="nav-button" data-view="alt">Alt Text Generator</button>
       </nav>
@@ -294,6 +296,87 @@
       </section>
     </div>
 
+    <div class="tool-panel" id="geoPanel">
+      <section class="panel converter-panel geo-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">PHOTO</span>
+            <h2>Photo geotag</h2>
+          </div>
+          <span class="status-badge converter-badge">JPG</span>
+        </div>
+
+        <div class="geo-layout">
+          <div class="geo-empty" id="geoEmpty">
+            <div class="geo-empty-copy">
+              <h3>Add GPS to a JPG</h3>
+              <p>Pick the place on the map, then download a copy with location metadata. Your photo stays in this browser.</p>
+              <ol class="geo-steps">
+                <li>Add a photo</li>
+                <li>Pin the location</li>
+                <li>Download</li>
+              </ol>
+            </div>
+            <div class="upload-area geo-upload" id="geoUploadArea" tabindex="0" role="button" aria-label="Upload a JPG photo to geotag">
+              <div class="upload-icon">📍</div>
+              <div class="upload-text">Drop a JPG here</div>
+              <div class="upload-hint">or click to browse · max 20 MB</div>
+              <input type="file" id="geoFileInput" accept="image/jpeg,.jpg,.jpeg">
+            </div>
+          </div>
+
+          <div class="geo-editor hidden" id="geoEditor">
+            <div class="geo-photo-card">
+              <div class="geo-card-head">
+                <div>
+                  <span class="geo-card-title">Photo</span>
+                  <strong id="geoFileName">photo.jpg</strong>
+                </div>
+                <button id="geoReplaceBtn" class="text-button" type="button">Replace</button>
+              </div>
+              <div class="geo-preview">
+                <img id="geoPreview" alt="Photo preview">
+              </div>
+              <div class="geo-file-meta" id="geoFileInfo"></div>
+            </div>
+
+            <div class="geo-location-card">
+              <div class="geo-card-head">
+                <div>
+                  <span class="geo-card-title">Location</span>
+                  <small>Click the map or drag the pin.</small>
+                </div>
+              </div>
+
+              <div id="geoMap" class="geo-map" aria-label="Map: click to set the photo location"></div>
+            </div>
+
+            <div class="geo-details">
+              <div class="geo-fields">
+                <label class="field compact-field">
+                  <span>Latitude</span>
+                  <input id="geoLat" type="number" min="-90" max="90" step="any" placeholder="e.g. 14.5995">
+                </label>
+                <label class="field compact-field">
+                  <span>Longitude</span>
+                  <input id="geoLon" type="number" min="-180" max="180" step="any" placeholder="e.g. 120.9842">
+                </label>
+              </div>
+
+              <div class="status hidden" id="geoStatus" role="status" aria-live="polite"></div>
+
+              <div class="geo-actions">
+                <button id="geoDownloadBtn" class="primary-button" type="button" disabled>Download geotagged JPG</button>
+                <button id="geoClearBtn" class="secondary-button" type="button">Clear</button>
+              </div>
+
+              <p class="hint">Coordinates are written to EXIF; other metadata is kept.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div class="tool-panel" id="casePanel">
       <section class="panel case-converter-panel">
         <div class="panel-heading">
@@ -429,6 +512,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" defer></script>
   <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js" integrity="sha384-P7sw4KeI1SDhOs6wYFsBysIIHFqMTgG4y9vunEfL8ZuV0WhnHsh9MRu9Rso17MtY" crossorigin="anonymous" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.min.js" integrity="sha384-jCIT5K/2IZXRfGKEkHsMIqV0GL+aYAW9+okLhwiWaqhiO8fsxq/rCdFV6pyQoHvZ" crossorigin="anonymous" defer></script>
   <script src="js/script.js" defer></script>
 </body>
 </html>

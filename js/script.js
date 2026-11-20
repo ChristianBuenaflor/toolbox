@@ -1791,6 +1791,223 @@ function setupAltText() {
   });
 }
 
+/* --------------------------- Photo geotag -------------------------- */
+
+const GEO_MAX_FILE_BYTES = 20 * 1024 * 1024;
+
+const geoState = {
+  dataUrl: '',
+  fileName: '',
+  map: null,
+  marker: null
+};
+
+function validGeoPoint(lat, lon) {
+  return Number.isFinite(lat) && Number.isFinite(lon) &&
+    lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+
+function setGeoStatus(message, kind) {
+  const el = $('geoStatus');
+  if (!el) return;
+  el.classList.remove('hidden', 'success', 'error', 'processing');
+  if (kind) el.classList.add(kind);
+  el.textContent = String(message);
+}
+
+function ensureGeoMap() {
+  if (geoState.map || typeof L === 'undefined') return geoState.map;
+  const container = $('geoMap');
+  if (!container) return null;
+
+  const map = L.map(container, { center: [20, 0], zoom: 2, worldCopyJump: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+  map.on('click', (event) => setGeoPoint(event.latlng.lat, event.latlng.lng));
+  geoState.map = map;
+  return map;
+}
+
+function setGeoPoint(lat, lon, { recenter = false, writeInputs = true } = {}) {
+  if (!validGeoPoint(lat, lon)) return;
+  const map = ensureGeoMap();
+  if (writeInputs) {
+    $('geoLat').value = lat.toFixed(6);
+    $('geoLon').value = lon.toFixed(6);
+  }
+  $('geoDownloadBtn').disabled = false;
+  if (!map) return;
+
+  if (!geoState.marker) {
+    geoState.marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+    geoState.marker.on('dragend', () => {
+      const point = geoState.marker.getLatLng();
+      setGeoPoint(point.lat, point.lng);
+    });
+  } else {
+    geoState.marker.setLatLng([lat, lon]);
+  }
+
+  if (recenter) map.setView([lat, lon], Math.max(map.getZoom(), 13));
+}
+
+function readGeoPoint(dataUrl) {
+  try {
+    const exif = piexif.load(dataUrl);
+    const gps = exif.GPS || {};
+    const lat = gps[piexif.GPSIFD.GPSLatitude];
+    const lon = gps[piexif.GPSIFD.GPSLongitude];
+    if (!Array.isArray(lat) || !Array.isArray(lon)) return null;
+
+    const latDeg = piexif.GPSHelper.dmsRationalToDeg(lat, gps[piexif.GPSIFD.GPSLatitudeRef]);
+    const lonDeg = piexif.GPSHelper.dmsRationalToDeg(lon, gps[piexif.GPSIFD.GPSLongitudeRef]);
+    return validGeoPoint(latDeg, lonDeg) ? { lat: latDeg, lon: lonDeg } : null;
+  } catch {
+    return null;
+  }
+}
+
+function handleGeoFile(file) {
+  if (!file) return;
+  const isJpeg = file.type === 'image/jpeg' || /\.jpe?g$/i.test(file.name);
+  if (!isJpeg) return showToast('Photo geotag works with JPG files only.');
+  if (!file.size) return showToast('That file is empty.');
+  if (file.size > GEO_MAX_FILE_BYTES) return showToast('Photo must be 20 MB or smaller.');
+
+  readBlobAsDataUrl(file).then((dataUrl) => {
+    const size = file.size >= 1048576
+      ? `${(file.size / 1048576).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+
+    geoState.dataUrl = dataUrl;
+    geoState.fileName = file.name;
+    $('geoPreview').src = dataUrl;
+    $('geoFileName').textContent = file.name;
+    $('geoFileInfo').textContent = size;
+    $('geoEmpty').classList.add('hidden');
+    $('geoEditor').classList.remove('hidden');
+    $('geoLat').value = '';
+    $('geoLon').value = '';
+    $('geoDownloadBtn').disabled = true;
+    if (geoState.marker) {
+      geoState.marker.remove();
+      geoState.marker = null;
+    }
+
+    loadImage(dataUrl).then((image) => {
+      if (geoState.dataUrl !== dataUrl) return;
+      $('geoFileInfo').textContent = `${size} · ${image.naturalWidth} × ${image.naturalHeight} px`;
+    }).catch(() => { /* keep the size-only label */ });
+
+    ensureGeoMap();
+    const point = readGeoPoint(dataUrl);
+    if (point) {
+      setGeoPoint(point.lat, point.lon, { recenter: true });
+      setGeoStatus('Existing location found. Drag the pin or click the map to adjust.', 'success');
+    } else {
+      if (geoState.map) geoState.map.setView([20, 0], 2);
+      setGeoStatus('No location in this photo. Click the map or type coordinates.', 'processing');
+    }
+    if (geoState.map) requestAnimationFrame(() => geoState.map.invalidateSize());
+  }).catch(() => showToast('Could not read that photo.'));
+}
+
+function clearGeoPhoto() {
+  geoState.dataUrl = '';
+  geoState.fileName = '';
+  if (geoState.marker) {
+    geoState.marker.remove();
+    geoState.marker = null;
+  }
+  $('geoEditor').classList.add('hidden');
+  $('geoEmpty').classList.remove('hidden');
+  $('geoPreview').removeAttribute('src');
+  $('geoFileName').textContent = '';
+  $('geoFileInfo').textContent = '';
+  $('geoFileInput').value = '';
+  $('geoLat').value = '';
+  $('geoLon').value = '';
+  $('geoDownloadBtn').disabled = true;
+  $('geoStatus').classList.add('hidden');
+}
+
+function downloadGeoPhoto() {
+  const latRaw = $('geoLat').value.trim();
+  const lonRaw = $('geoLon').value.trim();
+  const lat = Number(latRaw);
+  const lon = Number(lonRaw);
+  if (!geoState.dataUrl) return showToast('Upload a photo first.');
+  if (!latRaw || !lonRaw || !validGeoPoint(lat, lon)) return showToast('Enter a valid latitude and longitude.');
+
+  try {
+    const exif = piexif.load(geoState.dataUrl);
+    exif.GPS = exif.GPS || {};
+    exif.GPS[piexif.GPSIFD.GPSVersionID] = [2, 3, 0, 0];
+    exif.GPS[piexif.GPSIFD.GPSLatitudeRef] = lat >= 0 ? 'N' : 'S';
+    exif.GPS[piexif.GPSIFD.GPSLatitude] = piexif.GPSHelper.degToDmsRational(lat);
+    exif.GPS[piexif.GPSIFD.GPSLongitudeRef] = lon >= 0 ? 'E' : 'W';
+    exif.GPS[piexif.GPSIFD.GPSLongitude] = piexif.GPSHelper.degToDmsRational(lon);
+
+    const output = piexif.insert(piexif.dump(exif), geoState.dataUrl);
+    const link = document.createElement('a');
+    link.href = output;
+    link.download = `${geoState.fileName.replace(/\.jpe?g$/i, '') || 'photo'}-geotagged.jpg`;
+    link.click();
+    setGeoStatus('Geotag written. Check your downloads for the new file.', 'success');
+  } catch {
+    showToast('Could not write EXIF to this photo.');
+  }
+}
+
+function setupPhotoGeotag() {
+  const uploadArea = $('geoUploadArea');
+  const fileInput = $('geoFileInput');
+  if (!uploadArea || !fileInput) return;
+
+  fileInput.addEventListener('change', (event) => handleGeoFile(event.target.files[0]));
+  const openPicker = () => {
+    fileInput.value = '';
+    fileInput.click();
+  };
+  uploadArea.addEventListener('click', openPicker);
+  uploadArea.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openPicker();
+    }
+  });
+  ['dragover', 'dragenter'].forEach((name) => uploadArea.addEventListener(name, (event) => {
+    event.preventDefault();
+    uploadArea.classList.add('dragover');
+  }));
+  ['dragleave', 'drop'].forEach((name) => uploadArea.addEventListener(name, (event) => {
+    event.preventDefault();
+    uploadArea.classList.remove('dragover');
+  }));
+  uploadArea.addEventListener('drop', (event) => handleGeoFile(event.dataTransfer?.files?.[0]));
+
+  const syncFromInputs = () => {
+    const latRaw = $('geoLat').value.trim();
+    const lonRaw = $('geoLon').value.trim();
+    const lat = Number(latRaw);
+    const lon = Number(lonRaw);
+    const valid = Boolean(latRaw && lonRaw) && validGeoPoint(lat, lon);
+    $('geoDownloadBtn').disabled = !valid;
+    if (valid) setGeoPoint(lat, lon, { recenter: true, writeInputs: false });
+  };
+  $('geoLat').addEventListener('change', syncFromInputs);
+  $('geoLon').addEventListener('change', syncFromInputs);
+  $('geoDownloadBtn').addEventListener('click', downloadGeoPhoto);
+  $('geoClearBtn').addEventListener('click', clearGeoPhoto);
+  $('geoReplaceBtn').addEventListener('click', openPicker);
+
+  document.querySelector('.nav-button[data-view="geo"]')?.addEventListener('click', () => {
+    if (geoState.map) setTimeout(() => geoState.map.invalidateSize(), 0);
+  });
+}
+
 function parsedExt(url) {
   const clean = String(url).split('?')[0].split('#')[0];
   const dot = clean.lastIndexOf('.');
@@ -1804,6 +2021,7 @@ const debouncedRender = debounce(() => renderQR(false), 180);
 function init() {
   setupToolNavigation();
   setupImageConverter();
+  setupPhotoGeotag();
   setupCaseConverter();
   setupAltText();
 
